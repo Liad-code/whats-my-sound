@@ -826,74 +826,76 @@
             document.querySelector(`.level-btn[data-count="${count}"]`).classList.add('active');
         }
 
-        // Text-to-speech — teacher voice engine
-        let teacherVoice = null;
+        // Text-to-speech — Google Translate natural voice
+        let currentAudio = null;
 
-        // Pick the clearest, most natural English voice available
-        function findTeacherVoice() {
-            const voices = speechSynthesis.getVoices();
-            // Priority: high-quality neural/natural voices first
-            const preferred = [
-                'Microsoft Jenny Online (Natural)',
-                'Microsoft Aria Online (Natural)',
-                'Google US English',
-                'Google UK English Female',
-                'Samantha',
-                'Microsoft Zira',
-                'Microsoft Jenny',
-                'Karen',
-                'Moira',
-                'Fiona',
-                'Victoria',
-            ];
-            for (const name of preferred) {
-                const v = voices.find(v => v.name.includes(name));
-                if (v) return v;
-            }
-            // Fallback: any natural/online en voice, then any en-US
-            const natural = voices.find(v => v.lang.startsWith('en') && /natural|online|neural|premium/i.test(v.name));
-            if (natural) return natural;
-            const enFemale = voices.find(v => v.lang.startsWith('en') && /female|woman|zira|jenny|samantha|karen/i.test(v.name));
-            if (enFemale) return enFemale;
-            return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || null;
+        // Build Google TTS URL — natural human voice
+        function ttsUrl(text, slow = true) {
+            const encoded = encodeURIComponent(text);
+            const speed = slow ? '0.24' : '0.5';
+            return `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&ttsspeed=${speed}&q=${encoded}`;
         }
 
-        // Init voice when voices are loaded
-        speechSynthesis.onvoiceschanged = () => { teacherVoice = findTeacherVoice(); };
-        setTimeout(() => { if (!teacherVoice) teacherVoice = findTeacherVoice(); }, 100);
-        setTimeout(() => { if (!teacherVoice) teacherVoice = findTeacherVoice(); }, 500);
+        // Play audio from URL, returns a promise
+        function playAudio(url) {
+            return new Promise((resolve, reject) => {
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+                const audio = new Audio(url);
+                currentAudio = audio;
+                audio.onended = () => { currentAudio = null; resolve(); };
+                audio.onerror = () => { currentAudio = null; reject(); };
+                audio.play().catch(reject);
+            });
+        }
 
-        // Speak a single text with teacher settings
-        function speakText(text, rate = 0.55, onEnd = null) {
+        // Fallback: browser SpeechSynthesis if Google TTS is blocked
+        function speakFallback(text, rate = 0.5, onEnd = null) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
             utterance.rate = rate;
             utterance.pitch = 1.0;
-            utterance.volume = 1;
-            if (teacherVoice) utterance.voice = teacherVoice;
             if (onEnd) utterance.onend = onEnd;
+            speechSynthesis.cancel();
             speechSynthesis.speak(utterance);
-            return utterance;
         }
 
-        // Say the word clearly — slow, pause, repeat
-        function speakWord() {
+        // Main speak: say word slow, pause, say again at normal pace
+        async function speakWord() {
             if (!state.questions[state.currentQuestion]) return;
             const word = state.questions[state.currentQuestion].word;
             const btn = document.getElementById('soundBtn');
-
-            speechSynthesis.cancel();
             btn.classList.add('playing');
 
-            // First: very slow and clear
-            speakText(word, 0.4, () => {
-                // Pause, then repeat a bit faster but still slow
-                setTimeout(() => {
-                    speakText(word, 0.55, () => {
-                        btn.classList.remove('playing');
-                    });
-                }, 700);
-            });
+            try {
+                // First: slow and clear
+                await playAudio(ttsUrl(word, true));
+                // Pause
+                await new Promise(r => setTimeout(r, 600));
+                // Second: slightly faster
+                await playAudio(ttsUrl(word, false));
+                btn.classList.remove('playing');
+            } catch (e) {
+                // Fallback to browser TTS if Google is blocked
+                speakFallback(word, 0.5, () => {
+                    setTimeout(() => {
+                        speakFallback(word, 0.65, () => {
+                            btn.classList.remove('playing');
+                        });
+                    }, 600);
+                });
+            }
+        }
+
+        // Simple speak for missed words review
+        async function speakSimple(text) {
+            try {
+                await playAudio(ttsUrl(text, true));
+            } catch (e) {
+                speakFallback(text, 0.5);
+            }
         }
 
         // Generate questions
@@ -1098,8 +1100,7 @@
                     tag.textContent = `${w.emoji} ${w.word}`;
                     tag.style.cursor = 'pointer';
                     tag.onclick = () => {
-                        speechSynthesis.cancel();
-                        speakText(w.word, 0.4);
+                        speakSimple(w.word);
                     };
                     list.appendChild(tag);
                 });
