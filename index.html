@@ -829,38 +829,42 @@
         // Text-to-speech — teacher voice engine
         let teacherVoice = null;
 
-        // Pick the clearest, most natural female English voice available
+        // Pick the clearest, most natural English voice available
         function findTeacherVoice() {
             const voices = speechSynthesis.getVoices();
-            // Priority list: prefer high-quality female voices
+            // Priority: high-quality neural/natural voices first
             const preferred = [
+                'Microsoft Jenny Online (Natural)',
+                'Microsoft Aria Online (Natural)',
                 'Google US English',
                 'Google UK English Female',
+                'Samantha',
                 'Microsoft Zira',
                 'Microsoft Jenny',
-                'Samantha',
                 'Karen',
-                'Victoria',
-                'Fiona',
                 'Moira',
+                'Fiona',
+                'Victoria',
             ];
             for (const name of preferred) {
                 const v = voices.find(v => v.name.includes(name));
                 if (v) return v;
             }
-            // Fallback: any en-US female voice, then any en voice
-            const enUS = voices.find(v => v.lang.startsWith('en') && /female|woman|zira|jenny|samantha/i.test(v.name));
-            if (enUS) return enUS;
-            return voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en')) || null;
+            // Fallback: any natural/online en voice, then any en-US
+            const natural = voices.find(v => v.lang.startsWith('en') && /natural|online|neural|premium/i.test(v.name));
+            if (natural) return natural;
+            const enFemale = voices.find(v => v.lang.startsWith('en') && /female|woman|zira|jenny|samantha|karen/i.test(v.name));
+            if (enFemale) return enFemale;
+            return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || null;
         }
 
         // Init voice when voices are loaded
         speechSynthesis.onvoiceschanged = () => { teacherVoice = findTeacherVoice(); };
-        // Also try immediately (some browsers have voices ready)
         setTimeout(() => { if (!teacherVoice) teacherVoice = findTeacherVoice(); }, 100);
+        setTimeout(() => { if (!teacherVoice) teacherVoice = findTeacherVoice(); }, 500);
 
         // Speak a single text with teacher settings
-        function speakText(text, rate = 0.75, onEnd = null) {
+        function speakText(text, rate = 0.55, onEnd = null) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
             utterance.rate = rate;
@@ -872,7 +876,7 @@
             return utterance;
         }
 
-        // Say the word clearly twice — slow first, then natural pace
+        // Say the word clearly — slow, pause, repeat
         function speakWord() {
             if (!state.questions[state.currentQuestion]) return;
             const word = state.questions[state.currentQuestion].word;
@@ -881,14 +885,14 @@
             speechSynthesis.cancel();
             btn.classList.add('playing');
 
-            // First time: slow and clear
-            speakText(word, 0.65, () => {
-                // Pause, then repeat at a slightly more natural pace
+            // First: very slow and clear
+            speakText(word, 0.4, () => {
+                // Pause, then repeat a bit faster but still slow
                 setTimeout(() => {
-                    speakText(word, 0.8, () => {
+                    speakText(word, 0.55, () => {
                         btn.classList.remove('playing');
                     });
-                }, 500);
+                }, 700);
             });
         }
 
