@@ -826,89 +826,72 @@
             document.querySelector(`.level-btn[data-count="${count}"]`).classList.add('active');
         }
 
-        // Text-to-speech — clean browser voice, single engine
+        // Text-to-speech — Google Translate natural voice
+        let currentAudio = null;
         let speakId = 0;
-        let teacherVoice = null;
-        let voicesReady = false;
 
-        function findBestVoice() {
-            const voices = speechSynthesis.getVoices();
-            if (!voices.length) return null;
-            const preferred = [
-                'Microsoft Jenny Online (Natural)',
-                'Microsoft Aria Online (Natural)',
-                'Google US English',
-                'Google UK English Female',
-                'Samantha',
-                'Microsoft Zira',
-                'Microsoft Jenny',
-                'Karen',
-                'Victoria',
-            ];
-            for (const name of preferred) {
-                const v = voices.find(v => v.name.includes(name));
-                if (v) return v;
-            }
-            return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || null;
-        }
-
-        function initVoices() {
-            teacherVoice = findBestVoice();
-            voicesReady = true;
-        }
-        speechSynthesis.onvoiceschanged = initVoices;
-        setTimeout(initVoices, 100);
-        setTimeout(initVoices, 500);
-
-        // Cancel any ongoing speech
-        function stopSpeech() {
+        function stopAudio() {
             speakId++;
-            speechSynthesis.cancel();
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
         }
 
-        // Speak once and return a promise
-        function sayOnce(text, rate) {
-            return new Promise((resolve) => {
-                const u = new SpeechSynthesisUtterance(text);
-                u.lang = 'en-US';
-                u.rate = rate;
-                u.pitch = 1.0;
-                u.volume = 1;
-                if (teacherVoice) u.voice = teacherVoice;
-                u.onend = resolve;
-                u.onerror = resolve;
-                speechSynthesis.speak(u);
+        // Google TTS URL
+        function ttsUrl(text) {
+            return `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=en&q=${encodeURIComponent(text)}`;
+        }
+
+        // Play audio at a given playback speed, returns promise
+        function playAudio(url, speed, id) {
+            return new Promise((resolve, reject) => {
+                if (id !== speakId) return reject('cancelled');
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+                const audio = new Audio(url);
+                audio.playbackRate = speed;
+                currentAudio = audio;
+                audio.onended = () => { currentAudio = null; resolve(); };
+                audio.onerror = () => { currentAudio = null; reject('error'); };
+                audio.play().catch(() => reject('error'));
             });
         }
 
-        // Main speak: cancel previous, say word slow, pause, repeat
+        // Main speak: say word slow, pause, say again at normal pace
         async function speakWord() {
             if (!state.questions[state.currentQuestion]) return;
             const word = state.questions[state.currentQuestion].word;
             const btn = document.getElementById('soundBtn');
 
-            stopSpeech();
+            stopAudio();
             const id = speakId;
-
             btn.classList.add('playing');
 
-            // First: slow
-            await sayOnce(word, 0.45);
-            if (id !== speakId) return;
+            try {
+                // First: slow
+                await playAudio(ttsUrl(word), 0.7, id);
+                if (id !== speakId) return;
+                // Pause
+                await new Promise(r => setTimeout(r, 600));
+                if (id !== speakId) return;
+                // Second: natural pace
+                await playAudio(ttsUrl(word), 0.85, id);
+            } catch (e) { /* cancelled */ }
 
-            // Pause
-            await new Promise(r => setTimeout(r, 600));
-            if (id !== speakId) return;
-
-            // Second: a bit faster
-            await sayOnce(word, 0.6);
             if (id === speakId) btn.classList.remove('playing');
         }
 
         // Simple speak for missed words review
-        function speakSimple(text) {
-            stopSpeech();
-            sayOnce(text, 0.45);
+        async function speakSimple(text) {
+            stopAudio();
+            const id = speakId;
+            try {
+                await playAudio(ttsUrl(text), 0.7, id);
+            } catch (e) { /* ignore */ }
         }
 
         // Generate questions
