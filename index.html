@@ -860,11 +860,11 @@
         setTimeout(() => { if (!teacherVoice) teacherVoice = findTeacherVoice(); }, 100);
 
         // Speak a single text with teacher settings
-        function speakText(text, rate = 0.45, onEnd = null) {
+        function speakText(text, rate = 0.75, onEnd = null) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
             utterance.rate = rate;
-            utterance.pitch = 1.05;
+            utterance.pitch = 1.0;
             utterance.volume = 1;
             if (teacherVoice) utterance.voice = teacherVoice;
             if (onEnd) utterance.onend = onEnd;
@@ -872,7 +872,7 @@
             return utterance;
         }
 
-        // Main speak function: says the word slowly, then spells it letter by letter
+        // Say the word clearly twice — slow first, then natural pace
         function speakWord() {
             if (!state.questions[state.currentQuestion]) return;
             const word = state.questions[state.currentQuestion].word;
@@ -881,29 +881,14 @@
             speechSynthesis.cancel();
             btn.classList.add('playing');
 
-            // Step 1: Say the full word slowly
-            speakText(word, 0.4, () => {
-                // Step 2: Short pause, then spell each letter
+            // First time: slow and clear
+            speakText(word, 0.65, () => {
+                // Pause, then repeat at a slightly more natural pace
                 setTimeout(() => {
-                    const letters = word.replace(/\s/g, '').split('');
-                    let i = 0;
-                    function spellNext() {
-                        if (i < letters.length) {
-                            speakText(letters[i].toUpperCase(), 0.5, () => {
-                                i++;
-                                setTimeout(spellNext, 200);
-                            });
-                        } else {
-                            // Step 3: Say the full word one more time
-                            setTimeout(() => {
-                                speakText(word, 0.45, () => {
-                                    btn.classList.remove('playing');
-                                });
-                            }, 400);
-                        }
-                    }
-                    spellNext();
-                }, 350);
+                    speakText(word, 0.8, () => {
+                        btn.classList.remove('playing');
+                    });
+                }, 500);
             });
         }
 
