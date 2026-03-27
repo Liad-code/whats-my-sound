@@ -826,8 +826,19 @@
             document.querySelector(`.level-btn[data-count="${count}"]`).classList.add('active');
         }
 
-        // Text-to-speech — Google Translate natural voice
+        // Text-to-speech — Google Translate natural voice only
         let currentAudio = null;
+        let speakId = 0; // cancellation token
+
+        // Stop any currently playing audio
+        function stopAudio() {
+            speakId++;
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+        }
 
         // Build Google TTS URL — natural human voice
         function ttsUrl(text, slow = true) {
@@ -836,9 +847,10 @@
             return `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&ttsspeed=${speed}&q=${encoded}`;
         }
 
-        // Play audio from URL, returns a promise
-        function playAudio(url) {
+        // Play audio from URL, returns a promise (rejects if cancelled)
+        function playAudio(url, id) {
             return new Promise((resolve, reject) => {
+                if (id !== speakId) return reject('cancelled');
                 if (currentAudio) {
                     currentAudio.pause();
                     currentAudio = null;
@@ -846,56 +858,38 @@
                 const audio = new Audio(url);
                 currentAudio = audio;
                 audio.onended = () => { currentAudio = null; resolve(); };
-                audio.onerror = () => { currentAudio = null; reject(); };
-                audio.play().catch(reject);
+                audio.onerror = () => { currentAudio = null; reject('error'); };
+                audio.play().catch(() => reject('error'));
             });
         }
 
-        // Fallback: browser SpeechSynthesis if Google TTS is blocked
-        function speakFallback(text, rate = 0.5, onEnd = null) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US';
-            utterance.rate = rate;
-            utterance.pitch = 1.0;
-            if (onEnd) utterance.onend = onEnd;
-            speechSynthesis.cancel();
-            speechSynthesis.speak(utterance);
-        }
-
-        // Main speak: say word slow, pause, say again at normal pace
+        // Main speak: say word slow, pause, say again
         async function speakWord() {
             if (!state.questions[state.currentQuestion]) return;
             const word = state.questions[state.currentQuestion].word;
             const btn = document.getElementById('soundBtn');
-            btn.classList.add('playing');
 
+            stopAudio();
+            const id = speakId;
+
+            btn.classList.add('playing');
             try {
-                // First: slow and clear
-                await playAudio(ttsUrl(word, true));
-                // Pause
+                await playAudio(ttsUrl(word, true), id);
+                if (id !== speakId) return;
                 await new Promise(r => setTimeout(r, 600));
-                // Second: slightly faster
-                await playAudio(ttsUrl(word, false));
-                btn.classList.remove('playing');
-            } catch (e) {
-                // Fallback to browser TTS if Google is blocked
-                speakFallback(word, 0.5, () => {
-                    setTimeout(() => {
-                        speakFallback(word, 0.65, () => {
-                            btn.classList.remove('playing');
-                        });
-                    }, 600);
-                });
-            }
+                if (id !== speakId) return;
+                await playAudio(ttsUrl(word, false), id);
+            } catch (e) { /* cancelled or error — ignore */ }
+            if (id === speakId) btn.classList.remove('playing');
         }
 
         // Simple speak for missed words review
         async function speakSimple(text) {
+            stopAudio();
+            const id = speakId;
             try {
-                await playAudio(ttsUrl(text, true));
-            } catch (e) {
-                speakFallback(text, 0.5);
-            }
+                await playAudio(ttsUrl(text, true), id);
+            } catch (e) { /* ignore */ }
         }
 
         // Generate questions
