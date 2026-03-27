@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What's My Sound? - משחק צלילים באנגלית</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Rubik:wght@400;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6C5CE7;
+            --primary-light: #A29BFE;
+            --success: #00B894;
+            --error: #E17055;
+            --warning: #FDCB6E;
+            --bg: #DFE6E9;
+            --card: #FFFFFF;
+            --text: #2D3436;
+            --text-light: #636E72;
+        }
+
+        body {
+            font-family: 'Rubik', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .header h1 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 2.2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Score Bar */
+        .score-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .score-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+        }
+
+        .score-item .icon {
+            font-size: 1.4rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--warning);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Game Card */
+        .game-card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light), var(--success));
+        }
+
+        /* Picture Area */
+        .picture-area {
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .emoji-display {
+            font-size: 6rem;
+            line-height: 1.2;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.1));
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .emoji-display:hover {
+            transform: scale(1.1);
+        }
+
+        .emoji-display:active {
+            transform: scale(0.95);
+        }
+
+        .word-display {
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-top: 10px;
+            direction: ltr;
+            letter-spacing: 2px;
+        }
+
+        .word-display .first-letter {
+            color: var(--error);
+            font-size: 2.2rem;
+            text-decoration: underline;
+            text-decoration-style: wavy;
+            text-underline-offset: 4px;
+        }
+
+        .instruction {
+            color: var(--text-light);
+            font-size: 1rem;
+            margin: 15px 0;
+            font-weight: 600;
+        }
+
+        .sound-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 10px 24px;
+            font-size: 1rem;
+            font-family: 'Rubik', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 0;
+        }
+
+        .sound-btn:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        .sound-btn:active {
+            transform: translateY(0);
+        }
+
+        .sound-btn.playing {
+            animation: pulse 0.8s ease infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        /* Letter Choices */
+        .choices {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .choice-btn {
+            font-family: 'Fredoka One', cursive;
+            font-size: 2rem;
+            padding: 16px;
+            border: 3px solid #E0E0E0;
+            border-radius: 16px;
+            background: white;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: lowercase;
+            direction: ltr;
+        }
+
+        .choice-btn:hover:not(.disabled) {
+            border-color: var(--primary);
+            background: #F8F7FF;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(108, 92, 231, 0.2);
+        }
+
+        .choice-btn:active:not(.disabled) {
+            transform: translateY(0);
+        }
+
+        .choice-btn.correct {
+            border-color: var(--success);
+            background: #E8FFF5;
+            color: var(--success);
+            animation: correctBounce 0.5s ease;
+        }
+
+        .choice-btn.wrong {
+            border-color: var(--error);
+            background: #FFF0EC;
+            color: var(--error);
+            animation: shake 0.5s ease;
+        }
+
+        .choice-btn.disabled {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        @keyframes correctBounce {
+            0%, 100% { transform: scale(1); }
+            30% { transform: scale(1.2); }
+            60% { transform: scale(0.95); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+
+        /* Feedback */
+        .feedback {
+            margin-top: 15px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feedback.show {
+            opacity: 1;
+        }
+
+        .feedback.correct {
+            color: var(--success);
+        }
+
+        .feedback.wrong {
+            color: var(--error);
+        }
+
+        /* Streak */
+        .streak-display {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: var(--warning);
+            color: #2D3436;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s ease;
+        }
+
+        .streak-display.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Start Screen */
+        .start-screen, .end-screen {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .start-screen h2, .end-screen h2 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .start-screen p, .end-screen p {
+            color: var(--text-light);
+            font-size: 1.05rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .big-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 16px 40px;
+            font-size: 1.3rem;
+            font-family: 'Fredoka One', cursive;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(108, 92, 231, 0.35);
+        }
+
+        .big-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(108, 92, 231, 0.45);
+        }
+
+        .big-btn:active {
+            transform: translateY(0);
+        }
+
+        .big-btn.success {
+            background: linear-gradient(135deg, var(--success), #55EFC4);
+        }
+
+        /* Level selector */
+        .level-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .level-btn {
+            padding: 10px 20px;
+            border: 2px solid var(--primary-light);
+            border-radius: 12px;
+            background: white;
+            color: var(--primary);
+            font-family: 'Rubik', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .level-btn:hover, .level-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* End screen */
+        .end-screen .score-final {
+            font-family: 'Fredoka One', cursive;
+            font-size: 4rem;
+            color: var(--primary);
+            margin: 15px 0;
+        }
+
+        .stars {
+            font-size: 3rem;
+            margin: 10px 0;
+        }
+
+        .end-screen .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-item .num {
+            font-family: 'Fredoka One', cursive;
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .stat-item .label {
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        /* Confetti */
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            top: -10px;
+            animation: confettiFall linear forwards;
+        }
+
+        @keyframes confettiFall {
+            to {
+                top: 100vh;
+                transform: rotate(720deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .header h1 { font-size: 1.6rem; }
+            .emoji-display { font-size: 4.5rem; }
+            .word-display { font-size: 1.4rem; }
+            .choice-btn { font-size: 1.5rem; padding: 12px; }
+            .game-card { padding: 20px; }
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Next button */
+        .next-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-family: 'Rubik', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .next-btn.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .next-btn:hover {
+            background: #00D2A0;
+            transform: translateY(-2px);
+        }
+
+        /* Category badges */
+        .category-badge {
+            display: inline-block;
+            background: var(--primary-light);
+            color: white;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        /* Word reveal animation */
+        .word-reveal {
+            animation: revealWord 0.5s ease;
+        }
+
+        @keyframes revealWord {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Floating particles */
+        .particle {
+            position: fixed;
+            pointer-events: none;
+            font-size: 1.5rem;
+            animation: floatUp 1s ease forwards;
+            z-index: 999;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔤 What's My Sound? 🎵</h1>
+            <p>מצאו את האות הראשונה של המילה!</p>
+        </div>
+
+        <!-- Start Screen -->
+        <div class="game-card" id="startScreen">
+            <div class="start-screen">
+                <h2>!ברוכים הבאים 🎉</h2>
+                <p>
+                    במשחק הזה תשמעו מילה באנגלית ותצטרכו לבחור את האות שבה היא מתחילה.
+                    <br><br>
+                    לחצו על התמונה או על כפתור "שמע" כדי לשמוע את המילה!
+                </p>
+
+                <div style="margin: 20px 0;">
+                    <p style="font-weight: 700; color: var(--text); margin-bottom: 10px;">בחרו רמה:</p>
+                    <div class="level-selector">
+                        <button class="level-btn active" data-level="easy" onclick="selectLevel('easy')">🌱 קל</button>
+                        <button class="level-btn" data-level="medium" onclick="selectLevel('medium')">🌿 בינוני</button>
+                        <button class="level-btn" data-level="hard" onclick="selectLevel('hard')">🌳 מאתגר</button>
+                    </div>
+                </div>
+
+                <div style="margin: 20px 0;">
+                    <p style="font-weight: 700; color: var(--text); margin-bottom: 10px;">מספר שאלות:</p>
+                    <div class="level-selector">
+                        <button class="level-btn" data-count="5" onclick="selectCount(5)">5</button>
+                        <button class="level-btn active" data-count="10" onclick="selectCount(10)">10</button>
+                        <button class="level-btn" data-count="15" onclick="selectCount(15)">15</button>
+                        <button class="level-btn" data-count="20" onclick="selectCount(20)">20</button>
+                    </div>
+                </div>
+
+                <button class="big-btn" onclick="startGame()">
+                    !בואו נתחיל 🚀
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div class="game-card hidden" id="gameScreen">
+            <div class="streak-display" id="streak">🔥 רצף: <span id="streakCount">0</span></div>
+            <div class="category-badge" id="categoryBadge"></div>
+
+            <div class="picture-area">
+                <div class="emoji-display" id="emojiDisplay" onclick="speakWord()" title="לחצו לשמוע"></div>
+            </div>
+
+            <button class="sound-btn" id="soundBtn" onclick="speakWord()">
+                🔊 שמע את המילה
+            </button>
+
+            <div class="word-display hidden" id="wordDisplay"></div>
+
+            <p class="instruction" id="instruction">באיזו אות מתחילה המילה?</p>
+
+            <div class="choices" id="choices"></div>
+
+            <div class="feedback" id="feedback"></div>
+
+            <button class="next-btn" id="nextBtn" onclick="nextQuestion()">
+                הבא ←
+            </button>
+        </div>
+
+        <!-- Score Bar (during game) -->
+        <div class="score-bar hidden" id="scoreBar">
+            <div class="score-item">
+                <span class="icon">✅</span>
+                <span id="correctCount">0</span>
+            </div>
+            <div class="score-item">
+                <span>שאלה</span>
+                <span><span id="currentQ">0</span> / <span id="totalQ">10</span></span>
+            </div>
+            <div class="score-item">
+                <span class="icon">❌</span>
+                <span id="wrongCount">0</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- End Screen -->
+        <div class="game-card hidden" id="endScreen">
+            <div class="end-screen">
+                <div class="stars" id="starsDisplay"></div>
+                <h2 id="endTitle"></h2>
+                <div class="score-final" id="scoreFinal"></div>
+                <p id="endMessage"></p>
+
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="num" id="statCorrect">0</div>
+                        <div class="label">נכון ✅</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="num" id="statWrong">0</div>
+                        <div class="label">שגוי ❌</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="num" id="statStreak">0</div>
+                        <div class="label">🔥 רצף מקסימלי</div>
+                    </div>
+                </div>
+
+                <!-- Missed words review -->
+                <div id="missedWordsSection" class="hidden" style="margin: 20px 0; text-align: right;">
+                    <p style="font-weight: 700; color: var(--text); margin-bottom: 10px;">מילים לחזרה:</p>
+                    <div id="missedWordsList" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;"></div>
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                    <button class="big-btn" onclick="restartGame()">
+                        🔄 שחקו שוב
+                    </button>
+                    <button class="big-btn success" onclick="goHome()">
+                        🏠 חזרה
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="confetti-container" id="confettiContainer"></div>
+
+    <script>
+        // Word database organized by category and difficulty
+        const wordDatabase = {
+            easy: [
+                // Animals
+                { word: "cat", emoji: "🐱", category: "חיות" },
+                { word: "dog", emoji: "🐶", category: "חיות" },
+                { word: "fish", emoji: "🐟", category: "חיות" },
+                { word: "bird", emoji: "🐦", category: "חיות" },
+                { word: "bee", emoji: "🐝", category: "חיות" },
+                { word: "pig", emoji: "🐷", category: "חיות" },
+                { word: "hen", emoji: "🐔", category: "חיות" },
+                { word: "ant", emoji: "🐜", category: "חיות" },
+                // Food
+                { word: "apple", emoji: "🍎", category: "אוכל" },
+                { word: "banana", emoji: "🍌", category: "אוכל" },
+                { word: "egg", emoji: "🥚", category: "אוכל" },
+                { word: "milk", emoji: "🥛", category: "אוכל" },
+                { word: "cake", emoji: "🎂", category: "אוכל" },
+                { word: "ice cream", emoji: "🍦", category: "אוכל" },
+                { word: "pizza", emoji: "🍕", category: "אוכל" },
+                { word: "rice", emoji: "🍚", category: "אוכל" },
+                // Objects
+                { word: "sun", emoji: "☀️", category: "חפצים" },
+                { word: "hat", emoji: "🎩", category: "חפצים" },
+                { word: "ball", emoji: "⚽", category: "חפצים" },
+                { word: "key", emoji: "🔑", category: "חפצים" },
+                { word: "bed", emoji: "🛏️", category: "חפצים" },
+                { word: "cup", emoji: "☕", category: "חפצים" },
+                { word: "pen", emoji: "🖊️", category: "חפצים" },
+                { word: "door", emoji: "🚪", category: "חפצים" },
+                { word: "box", emoji: "📦", category: "חפצים" },
+                { word: "map", emoji: "🗺️", category: "חפצים" },
+                // Nature
+                { word: "tree", emoji: "🌳", category: "טבע" },
+                { word: "rain", emoji: "🌧️", category: "טבע" },
+                { word: "star", emoji: "⭐", category: "טבע" },
+                { word: "moon", emoji: "🌙", category: "טבע" },
+            ],
+            medium: [
+                // Animals
+                { word: "horse", emoji: "🐴", category: "חיות" },
+                { word: "zebra", emoji: "🦓", category: "חיות" },
+                { word: "tiger", emoji: "🐯", category: "חיות" },
+                { word: "lion", emoji: "🦁", category: "חיות" },
+                { word: "monkey", emoji: "🐒", category: "חיות" },
+                { word: "rabbit", emoji: "🐰", category: "חיות" },
+                { word: "turtle", emoji: "🐢", category: "חיות" },
+                { word: "whale", emoji: "🐋", category: "חיות" },
+                { word: "snake", emoji: "🐍", category: "חיות" },
+                { word: "spider", emoji: "🕷️", category: "חיות" },
+                // Food
+                { word: "orange", emoji: "🍊", category: "אוכל" },
+                { word: "grape", emoji: "🍇", category: "אוכל" },
+                { word: "lemon", emoji: "🍋", category: "אוכל" },
+                { word: "bread", emoji: "🍞", category: "אוכל" },
+                { word: "cheese", emoji: "🧀", category: "אוכל" },
+                { word: "cookie", emoji: "🍪", category: "אוכל" },
+                { word: "water", emoji: "💧", category: "אוכל" },
+                // Objects
+                { word: "watch", emoji: "⌚", category: "חפצים" },
+                { word: "guitar", emoji: "🎸", category: "חפצים" },
+                { word: "robot", emoji: "🤖", category: "חפצים" },
+                { word: "rocket", emoji: "🚀", category: "חפצים" },
+                { word: "pencil", emoji: "✏️", category: "חפצים" },
+                { word: "umbrella", emoji: "☂️", category: "חפצים" },
+                { word: "window", emoji: "🪟", category: "חפצים" },
+                { word: "mirror", emoji: "🪞", category: "חפצים" },
+                // Nature
+                { word: "flower", emoji: "🌸", category: "טבע" },
+                { word: "mountain", emoji: "⛰️", category: "טבע" },
+                { word: "river", emoji: "🏞️", category: "טבע" },
+                { word: "cloud", emoji: "☁️", category: "טבע" },
+                { word: "volcano", emoji: "🌋", category: "טבע" },
+                // Body
+                { word: "hand", emoji: "✋", category: "גוף" },
+                { word: "nose", emoji: "👃", category: "גוף" },
+                { word: "heart", emoji: "❤️", category: "גוף" },
+            ],
+            hard: [
+                // Animals
+                { word: "dolphin", emoji: "🐬", category: "חיות" },
+                { word: "giraffe", emoji: "🦒", category: "חיות" },
+                { word: "elephant", emoji: "🐘", category: "חיות" },
+                { word: "penguin", emoji: "🐧", category: "חיות" },
+                { word: "butterfly", emoji: "🦋", category: "חיות" },
+                { word: "octopus", emoji: "🐙", category: "חיות" },
+                { word: "kangaroo", emoji: "🦘", category: "חיות" },
+                // Food
+                { word: "pineapple", emoji: "🍍", category: "אוכל" },
+                { word: "strawberry", emoji: "🍓", category: "אוכל" },
+                { word: "watermelon", emoji: "🍉", category: "אוכל" },
+                { word: "chocolate", emoji: "🍫", category: "אוכל" },
+                { word: "mushroom", emoji: "🍄", category: "אוכל" },
+                { word: "broccoli", emoji: "🥦", category: "אוכל" },
+                // Objects
+                { word: "telephone", emoji: "📞", category: "חפצים" },
+                { word: "diamond", emoji: "💎", category: "חפצים" },
+                { word: "notebook", emoji: "📓", category: "חפצים" },
+                { word: "keyboard", emoji: "⌨️", category: "חפצים" },
+                { word: "scissors", emoji: "✂️", category: "חפצים" },
+                { word: "telescope", emoji: "🔭", category: "חפצים" },
+                { word: "necklace", emoji: "📿", category: "חפצים" },
+                // Places
+                { word: "hospital", emoji: "🏥", category: "מקומות" },
+                { word: "library", emoji: "📚", category: "מקומות" },
+                { word: "castle", emoji: "🏰", category: "מקומות" },
+                // Nature
+                { word: "rainbow", emoji: "🌈", category: "טבע" },
+                { word: "thunder", emoji: "⛈️", category: "טבע" },
+                { word: "tornado", emoji: "🌪️", category: "טבע" },
+                { word: "snowflake", emoji: "❄️", category: "טבע" },
+            ]
+        };
+
+        // Game state
+        let state = {
+            level: 'easy',
+            totalQuestions: 10,
+            currentQuestion: 0,
+            correct: 0,
+            wrong: 0,
+            streak: 0,
+            maxStreak: 0,
+            questions: [],
+            answered: false,
+            missedWords: []
+        };
+
+        // All unique beginning letters per level
+        function getLetters(level) {
+            const letters = new Set();
+            wordDatabase[level].forEach(w => letters.add(w.word[0].toLowerCase()));
+            return [...letters];
+        }
+
+        // Shuffle array
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // Level selection
+        function selectLevel(level) {
+            state.level = level;
+            document.querySelectorAll('.level-btn[data-level]').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.level-btn[data-level="${level}"]`).classList.add('active');
+        }
+
+        function selectCount(count) {
+            state.totalQuestions = count;
+            document.querySelectorAll('.level-btn[data-count]').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.level-btn[data-count="${count}"]`).classList.add('active');
+        }
+
+        // Text-to-speech
+        function speakWord() {
+            if (!state.questions[state.currentQuestion]) return;
+            const word = state.questions[state.currentQuestion].word;
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.55;
+            utterance.pitch = 1.1;
+
+            const btn = document.getElementById('soundBtn');
+            btn.classList.add('playing');
+            utterance.onend = () => btn.classList.remove('playing');
+
+            speechSynthesis.cancel();
+            speechSynthesis.speak(utterance);
+        }
+
+        // Generate questions
+        function generateQuestions() {
+            const pool = shuffle(wordDatabase[state.level]);
+            const count = Math.min(state.totalQuestions, pool.length);
+            state.questions = pool.slice(0, count);
+            state.totalQuestions = count;
+        }
+
+        // Start game
+        function startGame() {
+            state.currentQuestion = 0;
+            state.correct = 0;
+            state.wrong = 0;
+            state.streak = 0;
+            state.maxStreak = 0;
+            state.missedWords = [];
+            generateQuestions();
+
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('endScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            document.getElementById('scoreBar').classList.remove('hidden');
+
+            document.getElementById('totalQ').textContent = state.totalQuestions;
+            updateScore();
+            showQuestion();
+        }
+
+        // Show question
+        function showQuestion() {
+            state.answered = false;
+            const q = state.questions[state.currentQuestion];
+            const correctLetter = q.word[0].toLowerCase();
+
+            document.getElementById('emojiDisplay').textContent = q.emoji;
+            document.getElementById('categoryBadge').textContent = q.category;
+            document.getElementById('wordDisplay').classList.add('hidden');
+            document.getElementById('feedback').classList.remove('show', 'correct', 'wrong');
+            document.getElementById('nextBtn').classList.remove('show');
+            document.getElementById('instruction').textContent = 'באיזו אות מתחילה המילה?';
+
+            // Generate choices (1 correct + 2 wrong)
+            const allLetters = getLetters(state.level).filter(l => l !== correctLetter);
+            const wrongLetters = shuffle(allLetters).slice(0, 2);
+            const choices = shuffle([correctLetter, ...wrongLetters]);
+
+            const choicesEl = document.getElementById('choices');
+            choicesEl.innerHTML = '';
+            choices.forEach(letter => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.textContent = letter;
+                btn.onclick = () => handleChoice(letter, correctLetter, btn);
+                choicesEl.appendChild(btn);
+            });
+
+            updateScore();
+
+            // Auto-play word
+            setTimeout(() => speakWord(), 400);
+        }
+
+        // Handle choice
+        function handleChoice(chosen, correct, btnEl) {
+            if (state.answered) return;
+            state.answered = true;
+
+            const isCorrect = chosen === correct;
+            const feedbackEl = document.getElementById('feedback');
+            const wordEl = document.getElementById('wordDisplay');
+            const q = state.questions[state.currentQuestion];
+
+            // Disable all buttons
+            document.querySelectorAll('.choice-btn').forEach(b => {
+                b.classList.add('disabled');
+                if (b.textContent === correct) b.classList.add('correct');
+            });
+
+            if (isCorrect) {
+                btnEl.classList.add('correct');
+                state.correct++;
+                state.streak++;
+                if (state.streak > state.maxStreak) state.maxStreak = state.streak;
+
+                feedbackEl.textContent = getCorrectMessage();
+                feedbackEl.className = 'feedback show correct';
+
+                // Floating emoji
+                spawnParticle(btnEl, ['⭐', '✨', '🎉', '💪'][Math.floor(Math.random() * 4)]);
+
+                // Small confetti burst for streaks
+                if (state.streak >= 3) {
+                    miniConfetti();
+                }
+            } else {
+                btnEl.classList.add('wrong');
+                state.wrong++;
+                state.streak = 0;
+                state.missedWords.push(q);
+
+                feedbackEl.textContent = `😅 התשובה הנכונה היא: ${correct}`;
+                feedbackEl.className = 'feedback show wrong';
+            }
+
+            // Show the word with first letter highlighted
+            const firstLetter = q.word[0];
+            const rest = q.word.slice(1);
+            wordEl.innerHTML = `<span class="first-letter">${firstLetter}</span>${rest}`;
+            wordEl.classList.remove('hidden');
+            wordEl.classList.add('word-reveal');
+
+            // Speak the word again
+            setTimeout(() => speakWord(), 600);
+
+            // Update streak display
+            updateStreak();
+            updateScore();
+
+            // Show next button
+            setTimeout(() => {
+                document.getElementById('nextBtn').classList.add('show');
+            }, 800);
+        }
+
+        function getCorrectMessage() {
+            const messages = ['!מצוין 🌟', '!נכון 👏', '!יופי 🎯', '!כל הכבוד 💪', '!מדהים ✨', '!נהדר 🔥'];
+            return messages[Math.floor(Math.random() * messages.length)];
+        }
+
+        // Next question
+        function nextQuestion() {
+            state.currentQuestion++;
+            if (state.currentQuestion >= state.totalQuestions) {
+                endGame();
+            } else {
+                showQuestion();
+            }
+        }
+
+        // Update score display
+        function updateScore() {
+            document.getElementById('correctCount').textContent = state.correct;
+            document.getElementById('wrongCount').textContent = state.wrong;
+            document.getElementById('currentQ').textContent = state.currentQuestion + 1;
+            const pct = ((state.currentQuestion) / state.totalQuestions) * 100;
+            document.getElementById('progressFill').style.width = pct + '%';
+        }
+
+        // Update streak
+        function updateStreak() {
+            const streakEl = document.getElementById('streak');
+            const streakCountEl = document.getElementById('streakCount');
+            if (state.streak >= 2) {
+                streakCountEl.textContent = state.streak;
+                streakEl.classList.add('show');
+            } else {
+                streakEl.classList.remove('show');
+            }
+        }
+
+        // End game
+        function endGame() {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('scoreBar').classList.add('hidden');
+            document.getElementById('endScreen').classList.remove('hidden');
+
+            const pct = Math.round((state.correct / state.totalQuestions) * 100);
+            const stars = pct >= 90 ? '⭐⭐⭐' : pct >= 70 ? '⭐⭐' : pct >= 50 ? '⭐' : '';
+
+            document.getElementById('starsDisplay').textContent = stars;
+            document.getElementById('scoreFinal').textContent = `${pct}%`;
+            document.getElementById('statCorrect').textContent = state.correct;
+            document.getElementById('statWrong').textContent = state.wrong;
+            document.getElementById('statStreak').textContent = state.maxStreak;
+
+            if (pct >= 90) {
+                document.getElementById('endTitle').textContent = '!מדהים 🏆';
+                document.getElementById('endMessage').textContent = '!עבודה מעולה! שליטה מצוינת באותיות';
+                bigConfetti();
+            } else if (pct >= 70) {
+                document.getElementById('endTitle').textContent = '!כל הכבוד 🎉';
+                document.getElementById('endMessage').textContent = '!ציון מצוין! ממשיכים להתאמן';
+                miniConfetti();
+            } else if (pct >= 50) {
+                document.getElementById('endTitle').textContent = '!טוב מאוד 👍';
+                document.getElementById('endMessage').textContent = 'תרגול נוסף יעזור לכם להשתפר';
+            } else {
+                document.getElementById('endTitle').textContent = '!לא נורא 💪';
+                document.getElementById('endMessage').textContent = '!תתאמנו עוד קצת ותשתפרו';
+            }
+
+            // Show missed words
+            if (state.missedWords.length > 0) {
+                document.getElementById('missedWordsSection').classList.remove('hidden');
+                const list = document.getElementById('missedWordsList');
+                list.innerHTML = '';
+                state.missedWords.forEach(w => {
+                    const tag = document.createElement('span');
+                    tag.style.cssText = 'background: #FFF0EC; color: #E17055; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.95rem; direction: ltr;';
+                    tag.textContent = `${w.emoji} ${w.word}`;
+                    tag.style.cursor = 'pointer';
+                    tag.onclick = () => {
+                        const u = new SpeechSynthesisUtterance(w.word);
+                        u.lang = 'en-US';
+                        u.rate = 0.55;
+                        speechSynthesis.cancel();
+                        speechSynthesis.speak(u);
+                    };
+                    list.appendChild(tag);
+                });
+            } else {
+                document.getElementById('missedWordsSection').classList.add('hidden');
+            }
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        function goHome() {
+            document.getElementById('endScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+
+        // Visual effects
+        function spawnParticle(el, emoji) {
+            const rect = el.getBoundingClientRect();
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.textContent = emoji;
+            p.style.left = rect.left + rect.width / 2 + 'px';
+            p.style.top = rect.top + 'px';
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 1000);
+        }
+
+        function miniConfetti() {
+            const container = document.getElementById('confettiContainer');
+            const colors = ['#6C5CE7', '#00B894', '#FDCB6E', '#E17055', '#A29BFE', '#55EFC4'];
+            for (let i = 0; i < 20; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + '%';
+                c.style.background = colors[Math.floor(Math.random() * colors.length)];
+                c.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                c.style.width = (Math.random() * 8 + 5) + 'px';
+                c.style.height = (Math.random() * 8 + 5) + 'px';
+                c.style.animationDuration = (Math.random() * 1.5 + 1) + 's';
+                c.style.animationDelay = (Math.random() * 0.5) + 's';
+                container.appendChild(c);
+                setTimeout(() => c.remove(), 3000);
+            }
+        }
+
+        function bigConfetti() {
+            const container = document.getElementById('confettiContainer');
+            const colors = ['#6C5CE7', '#00B894', '#FDCB6E', '#E17055', '#A29BFE', '#55EFC4', '#FF6B6B', '#4ECDC4'];
+            for (let i = 0; i < 50; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + '%';
+                c.style.background = colors[Math.floor(Math.random() * colors.length)];
+                c.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                c.style.width = (Math.random() * 10 + 6) + 'px';
+                c.style.height = (Math.random() * 10 + 6) + 'px';
+                c.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+                c.style.animationDelay = (Math.random() * 1) + 's';
+                container.appendChild(c);
+                setTimeout(() => c.remove(), 4000);
+            }
+        }
+    </script>
+</body>
+</html>
