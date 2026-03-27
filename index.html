@@ -826,21 +826,85 @@
             document.querySelector(`.level-btn[data-count="${count}"]`).classList.add('active');
         }
 
-        // Text-to-speech
+        // Text-to-speech — teacher voice engine
+        let teacherVoice = null;
+
+        // Pick the clearest, most natural female English voice available
+        function findTeacherVoice() {
+            const voices = speechSynthesis.getVoices();
+            // Priority list: prefer high-quality female voices
+            const preferred = [
+                'Google US English',
+                'Google UK English Female',
+                'Microsoft Zira',
+                'Microsoft Jenny',
+                'Samantha',
+                'Karen',
+                'Victoria',
+                'Fiona',
+                'Moira',
+            ];
+            for (const name of preferred) {
+                const v = voices.find(v => v.name.includes(name));
+                if (v) return v;
+            }
+            // Fallback: any en-US female voice, then any en voice
+            const enUS = voices.find(v => v.lang.startsWith('en') && /female|woman|zira|jenny|samantha/i.test(v.name));
+            if (enUS) return enUS;
+            return voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en')) || null;
+        }
+
+        // Init voice when voices are loaded
+        speechSynthesis.onvoiceschanged = () => { teacherVoice = findTeacherVoice(); };
+        // Also try immediately (some browsers have voices ready)
+        setTimeout(() => { if (!teacherVoice) teacherVoice = findTeacherVoice(); }, 100);
+
+        // Speak a single text with teacher settings
+        function speakText(text, rate = 0.45, onEnd = null) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = rate;
+            utterance.pitch = 1.05;
+            utterance.volume = 1;
+            if (teacherVoice) utterance.voice = teacherVoice;
+            if (onEnd) utterance.onend = onEnd;
+            speechSynthesis.speak(utterance);
+            return utterance;
+        }
+
+        // Main speak function: says the word slowly, then spells it letter by letter
         function speakWord() {
             if (!state.questions[state.currentQuestion]) return;
             const word = state.questions[state.currentQuestion].word;
-            const utterance = new SpeechSynthesisUtterance(word);
-            utterance.lang = 'en-US';
-            utterance.rate = 0.55;
-            utterance.pitch = 1.1;
-
             const btn = document.getElementById('soundBtn');
-            btn.classList.add('playing');
-            utterance.onend = () => btn.classList.remove('playing');
 
             speechSynthesis.cancel();
-            speechSynthesis.speak(utterance);
+            btn.classList.add('playing');
+
+            // Step 1: Say the full word slowly
+            speakText(word, 0.4, () => {
+                // Step 2: Short pause, then spell each letter
+                setTimeout(() => {
+                    const letters = word.replace(/\s/g, '').split('');
+                    let i = 0;
+                    function spellNext() {
+                        if (i < letters.length) {
+                            speakText(letters[i].toUpperCase(), 0.5, () => {
+                                i++;
+                                setTimeout(spellNext, 200);
+                            });
+                        } else {
+                            // Step 3: Say the full word one more time
+                            setTimeout(() => {
+                                speakText(word, 0.45, () => {
+                                    btn.classList.remove('playing');
+                                });
+                            }, 400);
+                        }
+                    }
+                    spellNext();
+                }, 350);
+            });
         }
 
         // Generate questions
@@ -1045,11 +1109,8 @@
                     tag.textContent = `${w.emoji} ${w.word}`;
                     tag.style.cursor = 'pointer';
                     tag.onclick = () => {
-                        const u = new SpeechSynthesisUtterance(w.word);
-                        u.lang = 'en-US';
-                        u.rate = 0.55;
                         speechSynthesis.cancel();
-                        speechSynthesis.speak(u);
+                        speakText(w.word, 0.4);
                     };
                     list.appendChild(tag);
                 });
